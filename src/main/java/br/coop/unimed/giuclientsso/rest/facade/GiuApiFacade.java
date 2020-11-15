@@ -54,7 +54,7 @@ public class GiuApiFacade {
         TokenCookieOutputDTO tokenCookieOutputDTO = getTokenByCode(authCode);
         SessaoSSO sessao = getSessao(tokenCookieOutputDTO.getAccessToken(), tokenCookieOutputDTO.getCookie(), unimedCode);
 
-        return new LoginResponseDTO(sessao, tokenCookieOutputDTO.getCookie(), JwtService.generateToken(new JWTAuthenticationApplication(tokenCookieOutputDTO.getAccessToken(), sessao, unimedCode)));
+        return new LoginResponseDTO(sessao, tokenCookieOutputDTO.getCookie(), JwtService.generate(new JWTAuthenticationApplication(tokenCookieOutputDTO.getAccessToken(), sessao, unimedCode)));
     }
 
     public TokenCookieOutputDTO refreshToken(String authCode, String authCookie) {

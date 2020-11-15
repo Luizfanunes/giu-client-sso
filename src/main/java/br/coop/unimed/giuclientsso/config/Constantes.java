@@ -2,6 +2,9 @@ package br.coop.unimed.giuclientsso.config;
 
 public class Constantes {
     public static final String _LOGIN_PATH = "/login";
+    public static final String _API_PREFIX_PATH = "/api/";
+
+
     public static final String _AUTH_ROUTE = "/auth";
 
     public final static String _X_COOKIE_NAME = "X-CSRF-TOKEN";

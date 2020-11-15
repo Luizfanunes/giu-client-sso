@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.WebApplicationContext;
@@ -40,7 +41,7 @@ public class TokenFilter extends OncePerRequestFilter {
     private UsuarioToken usuarioToken;
 
     protected boolean shouldNotFilter(HttpServletRequest httpReq) {
-        if (httpReq.getMethod().contains("OPTIONS") || !httpReq.getRequestURI().startsWith("/api/"))
+        if (httpReq.getMethod().contains(HttpMethod.OPTIONS.name()) || !httpReq.getRequestURI().startsWith(Constantes._API_PREFIX_PATH))
             return true;
         return false;
     }
@@ -48,19 +49,23 @@ public class TokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest httpReq, HttpServletResponse httpRes, FilterChain chain) throws ServletException, IOException {
         try {
-            String authorization = httpReq.getHeader(Constantes._AUTHORIZATION_HEADER);
-            String cookie = Objects.isNull(httpReq.getCookies()) ? null : Arrays.stream(httpReq.getCookies()).filter(v -> v.getName().equals(Constantes._X_COOKIE_NAME)).map(Cookie::getValue).findFirst().orElse(null);
-            if (StringUtils.isEmpty(authorization)) {
-                this.usuarioToken = new UsuarioToken(null, null, null, null, null, false, null, false);
+            String authCode = httpReq.getHeader(Constantes._AUTHORIZATION_HEADER);
+            String authCookie = Objects.isNull(httpReq.getCookies()) ? null : Arrays.stream(httpReq.getCookies()).filter(v -> v.getName().equals(Constantes._X_COOKIE_NAME)).map(Cookie::getValue).findFirst().orElse(null);
+
+            //Caso o usuário não envie o token, a requisição poderá prosseguir. Apenas salvando o status que o usuário não está autenticado. E Caso esteja acessando uma rota segura, esse requisição será tratada posteriormente pelo AopAuthorizer.
+            if (StringUtils.isEmpty(authCode) || authCode.trim().isEmpty()) {
+                this.usuarioToken = new UsuarioToken(null, null, null, null, null, false, authCode, false);
+                chain.doFilter(httpReq, httpRes);
                 return;
             }
-            if (!authorization.trim().isEmpty()) {
-                authorization = authorization.replace(Constantes._AUTHORIZATION_HEADER_TYPE, "").trim();
-            }
-            JWTAuthenticationApplication jwt = JwtService.recuperarTokenInterno(authorization);
-            this.usuarioToken = authenticationService.atualizarSessao(jwt, cookie);
 
-            if (!StringUtils.isEmpty(usuarioToken.getAccessToken()) && !usuarioToken.getAccessToken().equals(authorization)) {
+            authCode = authCode.replace(Constantes._AUTHORIZATION_HEADER_TYPE, "").trim();
+
+            JWTAuthenticationApplication jwt = JwtService.mapApplicationToken(authCode);
+
+            this.usuarioToken = authenticationService.atualizarSessao(jwt, authCookie);
+
+            if (!StringUtils.isEmpty(usuarioToken.getAccessToken()) && !usuarioToken.getAccessToken().equals(authCode)) {
                 httpRes.addHeader(Constantes._AUTHORIZATION_HEADER_NEW, Constantes._AUTHORIZATION_HEADER_TYPE + usuarioToken.getAccessToken());
             }
             chain.doFilter(httpReq, httpRes);
