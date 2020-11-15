@@ -1,4 +1,4 @@
-package br.coop.unimed.giuclientsso.model;
+package br.coop.unimed.giuclientsso.model.sessao;
 
 
 import lombok.Data;

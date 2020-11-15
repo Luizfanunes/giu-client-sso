@@ -2,17 +2,18 @@ package br.coop.unimed.giuclientsso.rest.facade;
 
 import br.coop.unimed.giuclientsso.config.Constantes;
 import br.coop.unimed.giuclientsso.config.SsoProperties;
-import br.coop.unimed.giuclientsso.dto.LoginResponseDTO;
-import br.coop.unimed.giuclientsso.dto.TokenCookieOutputDTO;
-import br.coop.unimed.giuclientsso.dto.TokenOutputDTO;
+import br.coop.unimed.giuclientsso.model.AuthenticationModel;
+import br.coop.unimed.giuclientsso.model.token.TokenCookieOutput;
+import br.coop.unimed.giuclientsso.model.token.TokenOutput;
 import br.coop.unimed.giuclientsso.enumerator.Erro;
 import br.coop.unimed.giuclientsso.exception.GiuException;
 import br.coop.unimed.giuclientsso.exception.base.BaseSSORuntimeException;
 import br.coop.unimed.giuclientsso.exception.model.GIUClassError;
-import br.coop.unimed.giuclientsso.model.AplicacaoSSO;
-import br.coop.unimed.giuclientsso.model.SessaoSSO;
-import br.coop.unimed.giuclientsso.model.UsuarioUnimedSSO;
-import br.coop.unimed.giuclientsso.model.jwt.JWTAuthenticationApplication;
+import br.coop.unimed.giuclientsso.model.sessao.AplicacaoSSO;
+import br.coop.unimed.giuclientsso.model.sessao.SessaoSSO;
+import br.coop.unimed.giuclientsso.model.sessao.UsuarioUnimedSSO;
+import br.coop.unimed.giuclientsso.model.jwt.RequestGeneratorTokenApplication;
+import br.coop.unimed.giuclientsso.model.jwt.TemplateToken;
 import br.coop.unimed.giuclientsso.service.JwtService;
 import com.google.gson.Gson;
 import lombok.Data;
@@ -47,40 +48,40 @@ public class GiuApiFacade {
     @Autowired
     private SsoProperties ssoProperties;
 
-    public LoginResponseDTO authenticationByAuthCode(String authCode, String unimedCode) {
+    public AuthenticationModel authenticationByAuthCode(String authCode, String unimedCode) {
         if (StringUtils.isEmpty(unimedCode))
             throw new BaseSSORuntimeException(Erro.NAO_INFORMADO_UNIMED);
 
-        TokenCookieOutputDTO tokenCookieOutputDTO = getTokenByCode(authCode);
+        TokenCookieOutput tokenCookieOutputDTO = getTokenByCode(authCode);
         SessaoSSO sessao = getSessao(tokenCookieOutputDTO.getAccessToken(), tokenCookieOutputDTO.getCookie(), unimedCode);
 
-        return new LoginResponseDTO(sessao, tokenCookieOutputDTO.getCookie(), JwtService.generate(new JWTAuthenticationApplication(tokenCookieOutputDTO.getAccessToken(), sessao, unimedCode)));
+        return new AuthenticationModel(sessao, new RequestGeneratorTokenApplication(new TemplateTokenGiu(tokenCookieOutputDTO.getAccessToken()), sessao, unimedCode), tokenCookieOutputDTO.getCookie());
     }
 
-    public TokenCookieOutputDTO refreshToken(String authCode, String authCookie) {
+    public TokenCookieOutput refreshToken(String authCode, String authCookie) {
         if (StringUtils.isEmpty(authCode) || StringUtils.isEmpty(authCookie))
             throw new BaseSSORuntimeException(Erro.AUTH_TOKEN_COOKIE_NAO_INFORMADO);
 
-        ResponseEntity<TokenOutputDTO> response = getNewRestTemplate().exchange(
+        ResponseEntity<TokenOutput> response = getNewRestTemplate().exchange(
                 ssoProperties.getUrlGiu() + _REFRESH_TOKEN,
                 HttpMethod.POST,
                 new HttpEntity<>(new RefreshTokenRequest(), includeAuthenticationParameters(authCode, authCookie, null)),
-                TokenOutputDTO.class
+                TokenOutput.class
         );
-        return new TokenCookieOutputDTO(Objects.requireNonNull(response.getBody()), mapCookie(response));
+        return new TokenCookieOutput(Objects.requireNonNull(response.getBody()), mapCookie(response));
     }
 
-    private TokenCookieOutputDTO getTokenByCode(String authCode) {
+    private TokenCookieOutput getTokenByCode(String authCode) {
         if (StringUtils.isEmpty(authCode))
             throw new BaseSSORuntimeException(Erro.AUTH_TOKEN_NAO_INFORMADO);
 
-        ResponseEntity<TokenOutputDTO> response = getNewRestTemplate().exchange(
+        ResponseEntity<TokenOutput> response = getNewRestTemplate().exchange(
                 ssoProperties.getUrlGiu() + _OBTEM_TOKEN,
                 HttpMethod.POST,
                 new HttpEntity<>(new AuthByCodeRequest(authCode, ssoProperties.getRedirectUriAplicacao(), ssoProperties.getClientIdAplicacao())),
-                TokenOutputDTO.class
+                TokenOutput.class
         );
-        return new TokenCookieOutputDTO(Objects.requireNonNull(response.getBody()), mapCookie(response));
+        return new TokenCookieOutput(Objects.requireNonNull(response.getBody()), mapCookie(response));
     }
 
     private SessaoSSO getSessao(String authToken, String authCookie, String unimedCode) {
@@ -94,7 +95,7 @@ public class GiuApiFacade {
         return sessao;
     }
 
-    private String mapCookie(ResponseEntity<TokenOutputDTO> response) {
+    private String mapCookie(ResponseEntity<TokenOutput> response) {
         String cookie = Objects.requireNonNull(response.getHeaders().get("Set-Cookie")).get(0);
         return cookie.replace(Constantes._X_COOKIE_NAME + "=", "").split(";")[0];
     }
@@ -174,4 +175,48 @@ class AuthByCodeRequest {
 @Data
 class RefreshTokenRequest {
     private final String grant_type = "refresh_token";
+}
+
+class TemplateTokenGiu implements TemplateToken {
+
+    private String accessToken;
+
+    public TemplateTokenGiu(String accessToken) {
+        this.accessToken = accessToken;
+    }
+
+    @Override
+    public String getTokenId() {
+        return (String) JwtService.getClaim(this.accessToken, _SSO_TOKEN_ID, String.class);
+    }
+
+    @Override
+    public String getName() {
+        return (String) JwtService.getClaim(this.accessToken, _SSO_NAME, String.class);
+    }
+
+    @Override
+    public boolean isContaServico() {
+        return (Boolean) JwtService.getClaim(this.accessToken, _SSO_CONTA_SERVICO, Boolean.class);
+    }
+
+    @Override
+    public long getExpirationTime() {
+        return (Long) JwtService.getClaim(this.accessToken, _SSO_EXPIRATION, Long.class);
+    }
+
+    @Override
+    public long getUserId() {
+        return (Long) JwtService.getClaim(this.accessToken, _SSO_USER_ID, Long.class);
+    }
+
+    @Override
+    public String getUsername() {
+        return (String) JwtService.getClaim(this.accessToken, _SSO_USERNAME, String.class);
+    }
+
+    @Override
+    public String retrieveAccessToken() {
+        return accessToken;
+    }
 }

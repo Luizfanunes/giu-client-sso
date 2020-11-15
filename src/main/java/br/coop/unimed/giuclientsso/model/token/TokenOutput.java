@@ -1,8 +1,8 @@
-package br.coop.unimed.giuclientsso.dto;
+package br.coop.unimed.giuclientsso.model.token;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class TokenOutputDTO {
+public class TokenOutput {
 
     @JsonProperty(
             value = "access_token",
@@ -66,7 +66,7 @@ public class TokenOutputDTO {
         return userId;
     }
 
-    public TokenOutputDTO(String accessToken, Long expiresIn, boolean senhaExpirada, String tokenId, String userId) {
+    public TokenOutput(String accessToken, Long expiresIn, boolean senhaExpirada, String tokenId, String userId) {
         this.accessToken = accessToken;
         this.expiresIn = expiresIn;
         this.senhaExpirada = senhaExpirada;
@@ -74,6 +74,6 @@ public class TokenOutputDTO {
         this.userId = userId;
     }
 
-    public TokenOutputDTO(){
+    public TokenOutput(){
     }
 }

@@ -14,7 +14,7 @@ public class UsuarioToken {
     private String codigoUnimed;
     private String[] papeis;
     private boolean isAuthenticated;
-    private String accessToken;
+    private String ssoToken;
     private boolean contaServico;
 
 }

@@ -1,11 +1,9 @@
-package br.coop.unimed.giuclientsso.model;
+package br.coop.unimed.giuclientsso.model.sessao;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 
 @Data
 public class SessaoSSO {

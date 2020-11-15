@@ -3,7 +3,7 @@ package br.coop.unimed.giuclientsso.filter;
 import br.coop.unimed.giuclientsso.config.Constantes;
 import br.coop.unimed.giuclientsso.exception.GiuException;
 import br.coop.unimed.giuclientsso.model.UsuarioToken;
-import br.coop.unimed.giuclientsso.model.jwt.JWTAuthenticationApplication;
+import br.coop.unimed.giuclientsso.model.jwt.ApplicationToken;
 import br.coop.unimed.giuclientsso.service.AuthenticationService;
 import br.coop.unimed.giuclientsso.service.JwtService;
 import com.auth0.jwt.exceptions.JWTVerificationException;
@@ -61,12 +61,12 @@ public class TokenFilter extends OncePerRequestFilter {
 
             authCode = authCode.replace(Constantes._AUTHORIZATION_HEADER_TYPE, "").trim();
 
-            JWTAuthenticationApplication jwt = JwtService.mapApplicationToken(authCode);
+            ApplicationToken jwt = JwtService.mapApplicationToken(authCode);
 
             this.usuarioToken = authenticationService.atualizarSessao(jwt, authCookie);
 
-            if (!StringUtils.isEmpty(usuarioToken.getAccessToken()) && !usuarioToken.getAccessToken().equals(authCode)) {
-                httpRes.addHeader(Constantes._AUTHORIZATION_HEADER_NEW, Constantes._AUTHORIZATION_HEADER_TYPE + usuarioToken.getAccessToken());
+            if (!StringUtils.isEmpty(usuarioToken.getSsoToken()) && !usuarioToken.getSsoToken().equals(jwt.getSsoToken())) {
+                httpRes.addHeader(Constantes._AUTHORIZATION_HEADER_NEW, Constantes._AUTHORIZATION_HEADER_TYPE + usuarioToken.getSsoToken());
             }
             chain.doFilter(httpReq, httpRes);
         } catch (JWTVerificationException e) {
