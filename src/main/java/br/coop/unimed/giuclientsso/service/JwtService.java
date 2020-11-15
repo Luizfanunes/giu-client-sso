@@ -36,7 +36,7 @@ public class JwtService {
 
     public static String generate(@Valid JWTAuthenticationApplication jwt) {
         return com.auth0.jwt.JWT.create()
-                .withClaim(_APPLICATION_ACCESS_TOKEN, jwt.getAccessToken())
+                .withClaim(_APPLICATION_ACCESS_TOKEN, jwt.getSsoToken())
                 .withClaim(_APPLICATION_ROLES, Arrays.asList(jwt.getPapeis()).stream().collect(Collectors.joining(",")))
                 .withClaim(_APPLICATION_CODIGO_UNIMED, jwt.getCodigoUnimed())
                 .sign(getAlgorithm());

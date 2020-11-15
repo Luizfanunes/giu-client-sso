@@ -9,14 +9,14 @@ import javax.validation.constraints.NotNull;
 @Data
 public class JWTAuthenticationApplication {
     @NotNull
-    private String accessToken;
+    private String ssoToken;
     @NotNull
     private String[] papeis;
     @NotNull
     private String codigoUnimed;
 
     public JWTAuthenticationApplication(String accessToken, String[] papeis, String codigoUnimed) {
-        this.accessToken = accessToken;
+        this.ssoToken = accessToken;
         this.papeis = papeis;
         this.codigoUnimed = codigoUnimed;
     }

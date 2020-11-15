@@ -31,14 +31,14 @@ public class SSOGIUServiceImpl implements SSOService {
             throw new BaseSSORuntimeException(Erro.AUTH_TOKEN_COOKIE_NAO_INFORMADO);
         }
 
-        JWTGiu jwtGiu = JwtService.mapGiuToken(jwtAuthApp.getAccessToken());
-        String accessToken = jwtAuthApp.getAccessToken();
+        JWTGiu jwtGiu = JwtService.mapGiuToken(jwtAuthApp.getSsoToken());
+        String accessToken = jwtAuthApp.getSsoToken();
 
         if (jwtGiu.isExpirate()) {
             if (jwtGiu.isExpirate(true)) {
-                TokenCookieOutputDTO newToken = giuApiFacade.refreshToken(jwtAuthApp.getAccessToken(), cookie);
+                TokenCookieOutputDTO newToken = giuApiFacade.refreshToken(jwtAuthApp.getSsoToken(), cookie);
                 accessToken = newToken.getAccessToken();
-                jwtGiu = JwtService.mapGiuToken(newToken.getAccessToken());
+                jwtGiu = JwtService.mapGiuToken(accessToken);
             } else {
                 throw new SSOSessaoExpiradaException();
             }
