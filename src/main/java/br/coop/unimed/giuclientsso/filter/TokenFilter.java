@@ -15,17 +15,16 @@ import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
@@ -47,7 +46,7 @@ public class TokenFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest httpReq, HttpServletResponse httpRes, FilterChain chain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest httpReq, HttpServletResponse httpRes, FilterChain chain){
         try {
             String authCode = httpReq.getHeader(Constantes._AUTHORIZATION_HEADER);
             String authCookie = Objects.isNull(httpReq.getCookies()) ? null : Arrays.stream(httpReq.getCookies()).filter(v -> v.getName().equals(Constantes._X_COOKIE_NAME)).map(Cookie::getValue).findFirst().orElse(null);
@@ -71,10 +70,13 @@ public class TokenFilter extends OncePerRequestFilter {
             chain.doFilter(httpReq, httpRes);
         } catch (JWTVerificationException e) {
             //TODO jwt app invalido;
+            logger.error("Deu ruim " + e.getMessage());
+            httpRes.setStatus(HttpStatus.FORBIDDEN.value());
         } catch (GiuException e) {
-            // TODO erro ao chamar servico do GIU
+            logger.error("Deu ruim " + e.getMessage());
+            httpRes.setStatus(e.getHttpCode().value());
         } catch (Exception e) {
-            // TODO Default
+            logger.error("Deu ruim " + e.getMessage());
         }
 
     }
