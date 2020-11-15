@@ -1,23 +1,17 @@
 package br.coop.unimed.giuclientsso.model.jwt;
 
 import br.coop.unimed.giuclientsso.config.Constantes;
-import lombok.AllArgsConstructor;
 
-import javax.el.MethodNotFoundException;
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.util.TimeZone;
 
-@AllArgsConstructor
 public class SSOToken implements TemplateToken {
-    private String tokenId;
-    private String name;
-    private boolean contaServico;
-    private LocalDateTime expiration;
-    private Long userId;
-    private String username;
 
-    private boolean isExpirate(Long toleranceInMinutes) {
-        return expiration.plusMinutes(toleranceInMinutes).isBefore(LocalDateTime.now());
+    private String accessToken;
+
+    public SSOToken(String accessToken) {
+        this.accessToken = accessToken;
     }
 
     public boolean isExpirate(boolean withTolerance) {
@@ -28,42 +22,16 @@ public class SSOToken implements TemplateToken {
         return isExpirate(0L);
     }
 
-    @Override
-    public String getTokenId() {
-        return tokenId;
+    private LocalDateTime getExpirationDate() {
+        return LocalDateTime.ofInstant(Instant.ofEpochSecond(getExpirationTime()), TimeZone.getDefault().toZoneId());
+    }
+
+    private boolean isExpirate(Long toleranceInMinutes) {
+        return getExpirationDate().plusMinutes(toleranceInMinutes).isBefore(LocalDateTime.now());
     }
 
     @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public boolean isContaServico() {
-        return contaServico;
-    }
-
-    @Override
-    public long getExpirationTime() {
-        return expiration.toEpochSecond(ZoneOffset.UTC);
-    }
-
-    public LocalDateTime getExpiration() {
-        return expiration;
-    }
-
-    @Override
-    public long getUserId() {
-        return userId;
-    }
-
-    @Override
-    public String getUsername() {
-        return username;
-    }
-
-    @Override
-    public String retrieveAccessToken() {
-        throw new MethodNotFoundException();
+    public String getAccessToken() {
+        return accessToken;
     }
 }

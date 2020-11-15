@@ -2,19 +2,18 @@ package br.coop.unimed.giuclientsso.rest.facade;
 
 import br.coop.unimed.giuclientsso.config.Constantes;
 import br.coop.unimed.giuclientsso.config.SsoProperties;
-import br.coop.unimed.giuclientsso.model.AuthenticationModel;
-import br.coop.unimed.giuclientsso.model.token.TokenCookieOutput;
-import br.coop.unimed.giuclientsso.model.token.TokenOutput;
 import br.coop.unimed.giuclientsso.enumerator.Erro;
 import br.coop.unimed.giuclientsso.exception.GiuException;
 import br.coop.unimed.giuclientsso.exception.base.BaseSSORuntimeException;
 import br.coop.unimed.giuclientsso.exception.model.GIUClassError;
+import br.coop.unimed.giuclientsso.model.AuthenticationModel;
+import br.coop.unimed.giuclientsso.model.jwt.RequestGeneratorTokenApplication;
+import br.coop.unimed.giuclientsso.model.jwt.TemplateToken;
 import br.coop.unimed.giuclientsso.model.sessao.AplicacaoSSO;
 import br.coop.unimed.giuclientsso.model.sessao.SessaoSSO;
 import br.coop.unimed.giuclientsso.model.sessao.UsuarioUnimedSSO;
-import br.coop.unimed.giuclientsso.model.jwt.RequestGeneratorTokenApplication;
-import br.coop.unimed.giuclientsso.model.jwt.TemplateToken;
-import br.coop.unimed.giuclientsso.service.JwtService;
+import br.coop.unimed.giuclientsso.model.token.TokenCookieOutput;
+import br.coop.unimed.giuclientsso.model.token.TokenOutput;
 import com.google.gson.Gson;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -178,7 +177,6 @@ class RefreshTokenRequest {
 }
 
 class TemplateTokenGiu implements TemplateToken {
-
     private String accessToken;
 
     public TemplateTokenGiu(String accessToken) {
@@ -186,37 +184,7 @@ class TemplateTokenGiu implements TemplateToken {
     }
 
     @Override
-    public String getTokenId() {
-        return (String) JwtService.getClaim(this.accessToken, _SSO_TOKEN_ID, String.class);
-    }
-
-    @Override
-    public String getName() {
-        return (String) JwtService.getClaim(this.accessToken, _SSO_NAME, String.class);
-    }
-
-    @Override
-    public boolean isContaServico() {
-        return (Boolean) JwtService.getClaim(this.accessToken, _SSO_CONTA_SERVICO, Boolean.class);
-    }
-
-    @Override
-    public long getExpirationTime() {
-        return (Long) JwtService.getClaim(this.accessToken, _SSO_EXPIRATION, Long.class);
-    }
-
-    @Override
-    public long getUserId() {
-        return (Long) JwtService.getClaim(this.accessToken, _SSO_USER_ID, Long.class);
-    }
-
-    @Override
-    public String getUsername() {
-        return (String) JwtService.getClaim(this.accessToken, _SSO_USERNAME, String.class);
-    }
-
-    @Override
-    public String retrieveAccessToken() {
+    public String getAccessToken() {
         return accessToken;
     }
 }

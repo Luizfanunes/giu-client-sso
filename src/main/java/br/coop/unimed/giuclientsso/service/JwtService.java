@@ -29,7 +29,7 @@ public class JwtService {
 
     public static String generate(@Valid RequestGeneratorTokenApplication jwt) {
         return JWT.create()
-                .withClaim(_APPLICATION_ACCESS_TOKEN, jwt.getSsoToken().retrieveAccessToken())
+                .withClaim(_APPLICATION_ACCESS_TOKEN, jwt.getSsoToken().getAccessToken())
                 .withClaim(_APPLICATION_ROLES, String.join(",", jwt.getPapeis()))
                 .withClaim(_APPLICATION_CODIGO_UNIMED, jwt.getCodigoUnimed())
                 .sign(getAlgorithm());
@@ -48,22 +48,6 @@ public class JwtService {
                 claims.get(_APPLICATION_ACCESS_TOKEN).asString(),
                 claims.get(_APPLICATION_ROLES).asString().split(","),
                 claims.get(_APPLICATION_CODIGO_UNIMED).asString()
-        );
-    }
-
-    public static SSOToken mapSsoToken(String ssoToken) {
-        if (ssoToken.startsWith(Constantes._AUTHORIZATION_HEADER_TYPE))
-            ssoToken = ssoToken.substring(Constantes._AUTHORIZATION_HEADER_TYPE.length());
-
-        Map<String, Claim> claims = JWT.decode(ssoToken).getClaims();
-
-        return new SSOToken(
-                claims.get(TemplateToken._SSO_TOKEN_ID).asString(),
-                claims.get(TemplateToken._SSO_NAME).asString(),
-                claims.get(TemplateToken._SSO_CONTA_SERVICO).asBoolean(),
-                LocalDateTime.ofInstant(Instant.ofEpochSecond(claims.get(TemplateToken._SSO_EXPIRATION).asLong()), TimeZone.getDefault().toZoneId()),
-                claims.get(TemplateToken._SSO_USER_ID).asLong(),
-                claims.get(TemplateToken._SSO_USERNAME).asString()
         );
     }
 
