@@ -15,9 +15,6 @@ public class SsoProperties {
     @Value("${aplicacao.client-id}")
     private String clientIdAplicacao;
 
-    @Value("${aplicacao.painel-url}")
-    private String painelUrlAplicacao;
-
     @Value("${aplicacao.redirect-uri}")
     private String redirectUriAplicacao;
 
@@ -31,10 +28,6 @@ public class SsoProperties {
 
     public String getClientIdAplicacao() {
         return clientIdAplicacao;
-    }
-
-    public String getPainelUrlAplicacao() {
-        return painelUrlAplicacao;
     }
 
     public String getRedirectUriAplicacao() {

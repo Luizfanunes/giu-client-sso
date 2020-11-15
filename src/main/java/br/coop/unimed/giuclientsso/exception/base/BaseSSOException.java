@@ -1,4 +1,4 @@
-package br.coop.unimed.giuclientsso.exception;
+package br.coop.unimed.giuclientsso.exception.base;
 
 import br.coop.unimed.giuclientsso.enumerator.Erro;
 

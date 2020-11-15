@@ -3,32 +3,31 @@ package br.coop.unimed.giuclientsso.service;
 
 import br.coop.unimed.giuclientsso.dto.LoginResponseDTO;
 import br.coop.unimed.giuclientsso.exception.SSOUnauthorizedException;
+import br.coop.unimed.giuclientsso.model.UsuarioToken;
+import br.coop.unimed.giuclientsso.model.jwt.JWTAuthenticationApplication;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
 public class AuthenticationService {
 
-    public final static String _LOGIN_PATH = "/login";
-
-    public final static String _X_GIU_COOKIE_NAME = "X-CSRF-TOKEN";
-    public final static String _X_INTERNAL_COOKIE_NAME = "X-AUTH-TOKEN";
-    public final static String _X_INTERNAL_COOKIE_SAME_ORIGIN = "Strict";
-
-    public final static String _AUTHORIZATION_HEADER = "Authorization";
-    public final static String _AUTHORIZATION_HEADER_TYPE = "Bearer ";
-
     @Autowired
     private SSOService ssoService;
 
-    public LoginResponseDTO login(String authCode, String codigoUnimed) throws SSOUnauthorizedException {
+    public LoginResponseDTO login(String authCode, String unimedCode) throws SSOUnauthorizedException {
         log.debug("Recebendo requisição de autenticação.");
-        if (authCode == null || authCode.isEmpty()) {
+        if (StringUtils.isEmpty(authCode)) {
             log.error("Não foi informado o authorization code.");
             throw new SSOUnauthorizedException();
         }
-        return ssoService.login(authCode, codigoUnimed);
+        return ssoService.login(authCode, unimedCode);
+    }
+
+    public UsuarioToken atualizarSessao(JWTAuthenticationApplication jwtAuthApp, String cookie) {
+        log.debug("Recebendo requisição de atualizar sessão.");
+        return ssoService.atualizarSessao(jwtAuthApp, cookie);
     }
 }

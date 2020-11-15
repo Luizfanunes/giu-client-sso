@@ -6,7 +6,10 @@ public enum Erro {
     AUTH_TOKEN_NAO_INFORMADO(1, "Não foi informado o Authentication Code."),
     USUARIO_NAO_POSSUI_UNIMED(2, "O usuário não possui a Unimed informada."),
     USUARIO_NAO_POSSUI_APLICACAO(3, "O usuário não possui acesso a aplicação."),
-    NAO_INFORMADO_UNIMED(4, "Não foi informada a unimed do usuário.");
+    NAO_INFORMADO_UNIMED(4, "Não foi informada a unimed do usuário."),
+    AUTH_TOKEN_COOKIE_NAO_INFORMADO(5, "Não foi informado o Authentication Code e/ou Cookie."),
+    SESSAO_EXPIRADA(6, "Sua sessão está foi expirada. Favor realizar o login novamente.");
+
 
 
 

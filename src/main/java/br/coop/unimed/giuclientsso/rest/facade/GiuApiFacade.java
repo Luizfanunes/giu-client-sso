@@ -1,18 +1,18 @@
 package br.coop.unimed.giuclientsso.rest.facade;
 
+import br.coop.unimed.giuclientsso.config.Constantes;
 import br.coop.unimed.giuclientsso.config.SsoProperties;
 import br.coop.unimed.giuclientsso.dto.LoginResponseDTO;
 import br.coop.unimed.giuclientsso.dto.TokenCookieOutputDTO;
 import br.coop.unimed.giuclientsso.dto.TokenOutputDTO;
 import br.coop.unimed.giuclientsso.enumerator.Erro;
-import br.coop.unimed.giuclientsso.exception.BaseSSORuntimeException;
 import br.coop.unimed.giuclientsso.exception.GiuException;
+import br.coop.unimed.giuclientsso.exception.base.BaseSSORuntimeException;
 import br.coop.unimed.giuclientsso.exception.model.GIUClassError;
 import br.coop.unimed.giuclientsso.model.AplicacaoSSO;
 import br.coop.unimed.giuclientsso.model.SessaoSSO;
 import br.coop.unimed.giuclientsso.model.UsuarioUnimedSSO;
 import br.coop.unimed.giuclientsso.model.jwt.JWTAuthenticationApplication;
-import br.coop.unimed.giuclientsso.service.AuthenticationService;
 import br.coop.unimed.giuclientsso.service.JwtService;
 import com.google.gson.Gson;
 import lombok.Data;
@@ -41,68 +41,82 @@ import java.util.stream.Collectors;
 public class GiuApiFacade {
 
     private static final String _OBTEM_TOKEN = "/api/token";
+    private static final String _REFRESH_TOKEN = "/api/token";
     private static final String _OBTEM_SESSAO = "/api/usuario/obtem-sessao";
 
     @Autowired
     private SsoProperties ssoProperties;
 
-    public LoginResponseDTO autenticacaoByAuthCode(String authCode, String codigoUnimed) {
-        if (StringUtils.isEmpty(codigoUnimed)) {
+    public LoginResponseDTO authenticationByAuthCode(String authCode, String unimedCode) {
+        if (StringUtils.isEmpty(unimedCode))
             throw new BaseSSORuntimeException(Erro.NAO_INFORMADO_UNIMED);
-        }
-        TokenCookieOutputDTO tokenCookieOutputDTO = obtemTokenByCode(authCode);
-        SessaoSSO sessao = obtemSessao(tokenCookieOutputDTO.getAccessToken(), tokenCookieOutputDTO.getCookie(), codigoUnimed);
 
-        return new LoginResponseDTO(sessao, tokenCookieOutputDTO, JwtService.gerarToken(new JWTAuthenticationApplication(tokenCookieOutputDTO.getAccessToken(), sessao, codigoUnimed)));
+        TokenCookieOutputDTO tokenCookieOutputDTO = getTokenByCode(authCode);
+        SessaoSSO sessao = getSessao(tokenCookieOutputDTO.getAccessToken(), tokenCookieOutputDTO.getCookie(), unimedCode);
+
+        return new LoginResponseDTO(sessao, tokenCookieOutputDTO.getCookie(), JwtService.generateToken(new JWTAuthenticationApplication(tokenCookieOutputDTO.getAccessToken(), sessao, unimedCode)));
     }
 
-    private TokenCookieOutputDTO obtemTokenByCode(String authCode) {
+    public TokenCookieOutputDTO refreshToken(String authCode, String authCookie) {
+        if (StringUtils.isEmpty(authCode) || StringUtils.isEmpty(authCookie))
+            throw new BaseSSORuntimeException(Erro.AUTH_TOKEN_COOKIE_NAO_INFORMADO);
+
+        ResponseEntity<TokenOutputDTO> response = getNewRestTemplate().exchange(
+                ssoProperties.getUrlGiu() + _REFRESH_TOKEN,
+                HttpMethod.POST,
+                new HttpEntity<>(new RefreshTokenRequest(), includeAuthenticationParameters(authCode, authCookie, null)),
+                TokenOutputDTO.class
+        );
+        return new TokenCookieOutputDTO(Objects.requireNonNull(response.getBody()), mapCookie(response));
+    }
+
+    private TokenCookieOutputDTO getTokenByCode(String authCode) {
         if (StringUtils.isEmpty(authCode))
             throw new BaseSSORuntimeException(Erro.AUTH_TOKEN_NAO_INFORMADO);
 
-        ResponseEntity<TokenOutputDTO> response = obtemNovoRestTemplate().exchange(
+        ResponseEntity<TokenOutputDTO> response = getNewRestTemplate().exchange(
                 ssoProperties.getUrlGiu() + _OBTEM_TOKEN,
                 HttpMethod.POST,
                 new HttpEntity<>(new AuthByCodeRequest(authCode, ssoProperties.getRedirectUriAplicacao(), ssoProperties.getClientIdAplicacao())),
                 TokenOutputDTO.class
         );
-        return new TokenCookieOutputDTO(Objects.requireNonNull(response.getBody()), obtemCookie(response));
+        return new TokenCookieOutputDTO(Objects.requireNonNull(response.getBody()), mapCookie(response));
     }
 
-    private SessaoSSO obtemSessao(String authToken, String authCookie, String codigoUnimed) {
-        SessaoSSO sessao = obtemNovoRestTemplate().exchange(
+    private SessaoSSO getSessao(String authToken, String authCookie, String unimedCode) {
+        SessaoSSO sessao = getNewRestTemplate().exchange(
                 ssoProperties.getUrlGiu() + _OBTEM_SESSAO,
                 HttpMethod.GET,
-                new HttpEntity<>(incluirAutenticacao(authToken, authCookie, codigoUnimed)),
+                new HttpEntity<>(includeAuthenticationParameters(authToken, authCookie, unimedCode)),
                 SessaoSSO.class
         ).getBody();
-        popularPapeis(Objects.requireNonNull(sessao), codigoUnimed);
+        includeRoles(Objects.requireNonNull(sessao), unimedCode);
         return sessao;
     }
 
-    private String obtemCookie(ResponseEntity<TokenOutputDTO> response) {
+    private String mapCookie(ResponseEntity<TokenOutputDTO> response) {
         String cookie = Objects.requireNonNull(response.getHeaders().get("Set-Cookie")).get(0);
-        return cookie.replace(AuthenticationService._X_GIU_COOKIE_NAME + "=", "").split(";")[0];
+        return cookie.replace(Constantes._X_COOKIE_NAME + "=", "").split(";")[0];
     }
 
-    private HttpHeaders incluirAutenticacao(String authToken, String authCookie, String codigoUnimed) {
+    private HttpHeaders includeAuthenticationParameters(String authToken, String authCookie, String unimedCode) {
         HttpHeaders httpHeaders = new HttpHeaders();
         if (!StringUtils.isEmpty(authToken)) {
-            httpHeaders.add(AuthenticationService._AUTHORIZATION_HEADER, AuthenticationService._AUTHORIZATION_HEADER_TYPE + authToken);
+            httpHeaders.add(Constantes._AUTHORIZATION_HEADER, Constantes._AUTHORIZATION_HEADER_TYPE + authToken);
         }
         if (!StringUtils.isEmpty(authCookie)) {
-            httpHeaders.add("Cookie", AuthenticationService._X_GIU_COOKIE_NAME + "=" + authCookie);
+            httpHeaders.add(HttpHeaders.COOKIE, Constantes._X_COOKIE_NAME + "=" + authCookie);
         }
-        if (!StringUtils.isEmpty(codigoUnimed)) {
-            httpHeaders.add("X-UNIMED-APP", codigoUnimed);
+        if (!StringUtils.isEmpty(unimedCode)) {
+            httpHeaders.add(Constantes._X_UNIMED_HEADER, unimedCode);
         }
         return httpHeaders;
     }
 
-    private void popularPapeis(SessaoSSO sessao, @NotNull String codigoUnimed) {
-        Optional<UsuarioUnimedSSO> optUnimedSelecionada = sessao.getUsuarioUnimed().stream().filter(usuarioUnimedSSO -> usuarioUnimedSSO.getUnimed().getCodigo().equals(Long.valueOf(codigoUnimed))).findFirst();
-        if (optUnimedSelecionada.isPresent()) {
-            Optional<AplicacaoSSO> optAplicacao = optUnimedSelecionada.get().getAplicacoes().stream().filter(aplicacao -> aplicacao.getClientId().equals(ssoProperties.getClientIdAplicacao())).findFirst();
+    private void includeRoles(SessaoSSO sessao, @NotNull String codigoUnimed) {
+        Optional<UsuarioUnimedSSO> optUnimed = sessao.getUsuarioUnimed().stream().filter(usuarioUnimedSSO -> usuarioUnimedSSO.getUnimed().getCodigo().equals(Long.valueOf(codigoUnimed))).findFirst();
+        if (optUnimed.isPresent()) {
+            Optional<AplicacaoSSO> optAplicacao = optUnimed.get().getAplicacoes().stream().filter(aplicacao -> aplicacao.getClientId().equals(ssoProperties.getClientIdAplicacao())).findFirst();
             if (optAplicacao.isPresent()) {
                 sessao.setPapeis(optAplicacao.get().getPapeis());
             } else {
@@ -113,7 +127,7 @@ public class GiuApiFacade {
         }
     }
 
-    private RestTemplate obtemNovoRestTemplate() {
+    private RestTemplate getNewRestTemplate() {
         RestTemplate restTemplate = new RestTemplate();
         restTemplate.setErrorHandler(new GiuRestTemplateHandler());
         return restTemplate;
@@ -132,7 +146,7 @@ class GiuRestTemplateHandler implements ResponseErrorHandler {
                 .collect(Collectors.joining("\n"));
         GIUClassError giuError = gson.fromJson(json, GIUClassError.class);
         log.error("Erro ao chamar serviço do GIU. Details: " + giuError.toString());
-        throw new GiuException(giuError.getErrorCode(), giuError.getErrorDescription());
+        throw new GiuException(giuError.getErrorCode(), giuError.getErrorDescription(), response.getStatusCode());
     }
 
     @Override
@@ -155,4 +169,9 @@ class AuthByCodeRequest {
         this.redirect_uri = redirectUri;
         this.client_id = clientId;
     }
+}
+
+@Data
+class RefreshTokenRequest {
+    private final String grant_type = "refresh_token";
 }
